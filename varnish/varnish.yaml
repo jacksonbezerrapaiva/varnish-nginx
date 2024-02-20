@@ -1,0 +1,82 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: varnish-svc
+  namespace: varnish
+spec:
+  ports:
+  - name: "http"
+    port: 80
+  selector:
+    app: varnish-proxy
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: varnish-proxy
+  namespace: varnish
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: varnish-proxy
+  template:
+    metadata:
+      name: varnish-proxy
+      labels:
+        app: varnish-proxy
+    spec:
+      volumes:
+        - name: varnish-config
+          configMap:
+            name: varnish-vcl
+            items:
+              - key: default.vcl
+                path: default.vcl
+        - name: varnish-secret
+          secret:
+            secretName: varnish-secret
+        - name: shared-data
+          emptyDir: {}
+      containers:
+      - name: varnish
+        image: dkruyt/varnish:alpine
+        imagePullPolicy: Always
+        env:
+        - name: CACHE_SIZE
+          value: 128m
+        - name: VCL_CONFIG
+          value: /etc/varnish/configmap/default.vcl
+        - name: SECRET_FILE
+          value: /etc/varnish/k8s-secret/secret
+        - name: VARNISHD_PARAMS
+          value: -p default_ttl=3600 -p default_grace=3600 -T localhost:6082
+        volumeMounts:
+          - name: varnish-config
+            mountPath: /etc/varnish/configmap
+          - name: varnish-secret
+            mountPath: /etc/varnish/k8s-secret
+          - name: shared-data
+            mountPath: /var/lib/varnish
+        ports:
+        - containerPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: varnish-ingress
+  namespace: varnish
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: varnish-poc.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: varnish-svc
+            port:
+              number: 80

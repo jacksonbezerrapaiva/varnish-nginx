@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vcl-template
+  namespace: varnish-cache
+data:
+  default.vcl.tmpl: |
+    vcl 4.0;
+
+    import std;
+    import directors;
+
+    // ".Frontends" is a slice that contains all known Varnish instances
+    // (as selected by the service specified by -frontend-service).
+    // The backend name needs to be the Pod name, since this value is compared
+    // to the server identity ("server.identity" [1]) later.
+    //
+    //   [1]: https://varnish-cache.org/docs/6.4/reference/vcl.html#local-server-remote-and-client
+    {{ range .Frontends }}
+    backend {{ .Name }} {
+        .host = "{{ .Host }}";
+        .port = "{{ .Port }}";
+    }
+    {{- end }}
+ 
+    {{ range .Backends }}
+    backend {{ .Name }} {
+        .host = "{{ .Host }}";
+        .port = "{{ .Port }}";
+    }
+    {{- end }}
+
+    sub vcl_init {
+        new cluster = directors.shard();
+        {{ range .Frontends -}}
+        cluster.add_backend({{ .Name }});
+        {{ end }}
+        cluster.set_warmup(180);
+        cluster.reconfigure();
+        new lb = directors.round_robin();
+        {{ range .Backends -}}
+        lb.add_backend({{ .Name }});
+        {{ end }}
+    }
+
+    sub vcl_recv
+    {
+        # Set backend hint for non cachable objects.
+        set req.backend_hint = lb.backend();
+        std.log("req.backend_hint:" + req.backend_hint);
+        # ...
+        unset req.http.x-cache;
+        set req.backend_hint = cluster.backend(by=URL);
+        std.log("req.backend_hint:" + req.backend_hint);
+        set req.http.x-shard = req.backend_hint;
+        if (req.http.x-shard != server.identity) {
+            return(pass);
+        }
+        set req.backend_hint = lb.backend();
+        # ...
+        return(hash);
+    }
+
+    sub vcl_deliver {
+        if (obj.hits > 0) {
+            set resp.http.X-Cache = "HIT from Varnish cache" ;
+        } else {
+            set resp.http.X-Cache = "MISS";
+        }
+    }
