@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:latest
+        image: jacksonbezerrapaiva/nginx-image:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 80

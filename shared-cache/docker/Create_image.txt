@@ -1,0 +1,7 @@
+docker build -t nginx-image .
+docker images
+docker run -d --name <name-container> -p 8080:80 <new_image_name>
+docker tag nginx-image jacksonbezerrapaiva/nginx-image
+
+docker login
+docker push jacksonbezerrapaiva/nginx-image
