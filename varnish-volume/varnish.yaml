@@ -16,7 +16,7 @@ metadata:
   name: varnish-proxy
   namespace: varnish-volume
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: varnish-proxy
@@ -41,8 +41,11 @@ spec:
             claimName: task-pv-claim
       containers:
       - name: varnish
-        image: dkruyt/varnish:alpine
+        #image: dkruyt/varnish:alpine
+        image: jacksonbezerrapaiva/varnish-alpine:latest
         imagePullPolicy: Always
+        #args: [",/var/lib/varnish,1G"]
+        args: ["-s malloc,512M"]  
         env:
         - name: CACHE_SIZE
           value: 1g
@@ -50,11 +53,9 @@ spec:
           value: /etc/varnish/configmap/default.vcl
         - name: SECRET_FILE
           value: /etc/varnish/k8s-secret/secret
-        - name: VARNISHD_PARAMS
-          value: -p default_ttl=3600 -p default_grace=3600 -T localhost:6082 -s file,/var/lib/varnish/test,1G
         volumeMounts:
           - name: varnish-config
-            mountPath: /etc/varnish/configmap
+            mountPath: /etc/varnish
           - name: varnish-secret
             mountPath: /etc/varnish/k8s-secret
           - name: shared-data

@@ -1,10 +1,7 @@
-vcl 4.0;
-
-import directors;
-import std;
+vcl 4.1;
 
 backend site {
-    .host = "nginx";
+    .host = "10.244.0.27";
     .port = "80";
 }
 

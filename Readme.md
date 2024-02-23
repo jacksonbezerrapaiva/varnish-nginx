@@ -41,3 +41,14 @@ bash -i shared-cache/k8s-delete.sh
 bash -i varnish/k8s-delete.sh
 bash -i varnish-volume/k8s-delete.sh
 ```
+
+
+## Generate imagem docker Hub
+```sh
+docker build -t varnish-alpine .
+docker images
+docker run --name <name-container> -p 8080:80 <new_image_name>
+docker tag varnish-alpine jacksonbezerrapaiva/varnish-alpine
+docker login
+docker push jacksonbezerrapaiva/varnish-alpine
+```
