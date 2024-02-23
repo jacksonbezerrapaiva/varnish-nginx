@@ -47,8 +47,16 @@ bash -i varnish-volume/k8s-delete.sh
 ```sh
 docker build -t varnish-alpine .
 docker images
-docker run --name <name-container> -p 8080:80 <new_image_name>
-docker tag varnish-alpine jacksonbezerrapaiva/varnish-alpine
+docker run --name fc3610eb141e -p 8099:80 varnish-ubuntu
+docker container logs fc3610eb141e
+
+docker tag varnish-ubuntu jacksonbezerrapaiva/varnish-ubuntu
 docker login
-docker push jacksonbezerrapaiva/varnish-alpine
+docker push jacksonbezerrapaiva/varnish-ubuntu
+```
+
+
+## Command start varnish
+```sh
+sudo /usr/local/sbin/varnishd -f /home/jackson/repositories/varnish-nginx/varnish-volume/default.vcl -a http=:5555,HTTP -sdeprecated_persistent,/home/jackson/varnish/logs/test,1G -S /home/jackson/repositories/varnish-nginx/secret  -T localhost:6082 -n /home/jackson/varnish
 ```

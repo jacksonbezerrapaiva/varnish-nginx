@@ -1,13 +1,24 @@
-FROM varnish:7.4.2
+FROM python:3.10-bullseye
 
 USER root
 
-ENV VCL_CONFIG=/etc/varnish/default.vcl
+RUN apt-get update 
+RUN apt-get install -y make automake autotools-dev libedit-dev libjemalloc-dev libncurses-dev libpcre2-dev libtool pkg-config python3-sphinx cpio
 
-ENV CACHE_SIZE=64m
+COPY varnish-cache ./app
+COPY varnish-cache/default.vcl ./app
 
-ENV VARNISHD_PARAMS=-p default_ttl=3600
+WORKDIR /app
+RUN ./autogen.sh
+RUN ./configure --with-persistent-storage
+RUN make
+RUN make install
+RUN mkdir varnish-cache
 
-ENV SECRET_FILE=/etc/varnish/secret
+SHELL ["/bin/bash", "-c"]
 
-EXPOSE 80
+CMD varnishd -F -f /app/default.vcl \
+  -s deprecated_persistent,/app/varnish-cache/LOG,1G \
+  -a :80
+
+
